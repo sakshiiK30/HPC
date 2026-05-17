@@ -1,0 +1,93 @@
+#include <iostream>
+#include <cuda_runtime.h>
+
+using namespace std;
+
+// CUDA Kernel for vector addition
+__global__ void vectorAdd(int *A, int *B, int *C, int n)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (idx < n)
+    {
+        C[idx] = A[idx] + B[idx];
+    }
+}
+
+int main()
+{
+    int n = 1000000;
+    int size = n * sizeof(int);
+
+    // Host vectors
+    int *h_A, *h_B, *h_C;
+
+    // Allocate memory on host
+    h_A = (int*)malloc(size);
+    h_B = (int*)malloc(size);
+    h_C = (int*)malloc(size);
+
+    // Initialize vectors
+    for (int i = 0; i < n; i++)
+    {
+        h_A[i] = i;
+        h_B[i] = i * 2;
+    }
+
+    // Device vectors
+    int *d_A, *d_B, *d_C;
+
+    // Allocate memory on GPU
+    cudaMalloc((void**)&d_A, size);
+    cudaMalloc((void**)&d_B, size);
+    cudaMalloc((void**)&d_C, size);
+
+    // Copy data from host to device
+    cudaMemcpy(d_A, h_A, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_B, h_B, size, cudaMemcpyHostToDevice);
+
+    // Define block size and grid size
+    int blockSize = 256;
+    int gridSize = (n + blockSize - 1) / blockSize;
+
+    // Launch kernel
+    vectorAdd<<<gridSize, blockSize>>>(d_A, d_B, d_C, n);
+
+    // Copy result back to host
+    cudaMemcpy(h_C, d_C, size, cudaMemcpyDeviceToHost);
+
+    // Print first 10 results
+    cout << "Resultant Vector:" << endl;
+
+    for (int i = 0; i < 10; i++)
+    {
+        cout << h_C[i] << " ";
+    }
+
+    cout << endl;
+
+    // Free GPU memory
+    cudaFree(d_A);
+    cudaFree(d_B);
+    cudaFree(d_C);
+
+    // Free host memory
+    free(h_A);
+    free(h_B);
+    free(h_C);
+
+    return 0;
+}
+
+
+OUTPUT: 
+
+Enter the number of elements: 5
+Enter the elements: 6 4 5 7 2
+Sorted array using Merge Sort: 2 4 5 6 7 
+Merge sort time in seconds: 1.4e-05
+
+
+
+
+COMPILER LINK: Leetgpu.com/playground
